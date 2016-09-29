@@ -41,3 +41,26 @@ fn main() {
         dispatch(&server, message).unwrap();
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use irc::client::prelude::*;
+    use irc::client::conn::MockConnection;
+
+    pub fn make_server(cmd: &str) -> IrcServer {
+        let connection = MockConnection::new(cmd);
+
+        let config = Config {
+            nickname: Some("Gauss".into()),
+            server:   Some("irc.test.net".into()),
+            channels: Some(vec!["#test".into()]),
+            ..Default::default()
+        };
+
+        IrcServer::from_connection(config, connection)
+    }
+
+    pub fn get_server_value(server: IrcServer) -> String {
+        server.conn().written(server.config().encoding()).unwrap()
+    }
+}
