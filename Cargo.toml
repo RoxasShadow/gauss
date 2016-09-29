@@ -1,0 +1,15 @@
+[package]
+name    = "gauss"
+version = "0.1.0"
+
+repository = "https://github.com/RoxasShadow/gauss"
+authors    = ["Giovanni Capuano <webmaster@giovannicapuano.net>"]
+license    = "WTFPL"
+
+description = "Sono bello."
+keywords    = ["bot", "irc"]
+
+[dependencies]
+irc   = "0.11"
+regex = "0.1"
+lazy_static = "0.2"
