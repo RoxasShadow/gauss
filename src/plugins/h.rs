@@ -30,3 +30,40 @@ impl<'a> Plugin for H<'a> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use ::tests::{make_server, get_server_value};
+
+    use irc::client::prelude::*;
+
+    use plugin::Plugin;
+    use super::H;
+
+    #[test]
+    fn test_allowed() {
+        let server = make_server("PRIVMSG test :h Gauss\r\n");
+
+        for message in server.iter() {
+            let message = message.unwrap();
+            let plugin  = H::new(&server);
+
+            assert!(plugin.is_allowed(&message));
+            assert!(plugin.execute(&message).is_ok());
+        }
+
+        assert_eq!("PRIVMSG test :h \r\n", &get_server_value(server)[..]);
+    }
+
+    #[test]
+    fn test_not_allowed() {
+        let server = make_server("PRIVMSG test :h Holo\r\n");
+
+        for message in server.iter() {
+            let message = message.unwrap();
+            let plugin  = H::new(&server);
+
+            assert!(!plugin.is_allowed(&message));
+        }
+    }
+}
