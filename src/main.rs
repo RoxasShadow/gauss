@@ -1,5 +1,6 @@
 extern crate irc;
 extern crate regex;
+extern crate kuchiki;
 #[macro_use] extern crate lazy_static;
 
 #[macro_use] mod plugin;
@@ -12,8 +13,9 @@ use irc::client::prelude::*;
 use plugin::Plugin;
 
 fn dispatch(server: &IrcServer, message: Message) -> io::Result<()> {
-    let plugins = vec![
-        plugins::h::H::new(&server)
+    let plugins: Vec<Box<Plugin>> = vec![
+        Box::new(plugins::h::H::new(&server)),
+        Box::new(plugins::url::Url::new(&server)),
     ];
 
     for plugin in plugins {
