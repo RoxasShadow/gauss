@@ -52,7 +52,7 @@ mod tests {
             assert!(plugin.execute(&message).is_ok());
         }
 
-        assert_eq!("PRIVMSG test :h \r\n", &get_server_value(server)[..]);
+        assert_eq!("PRIVMSG test :h \r\n", &*get_server_value(server));
     }
 
     #[test]
