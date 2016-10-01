@@ -18,7 +18,7 @@ fn dispatch(server: &IrcServer, message: Message) -> io::Result<()> {
         Box::new(plugins::url::Url::new(&server)),
     ];
 
-    for plugin in plugins {
+    for mut plugin in plugins {
         if plugin.is_allowed(&message) {
             try!(plugin.execute(&message));
         }
@@ -50,8 +50,6 @@ mod tests {
     use irc::client::conn::MockConnection;
 
     pub fn make_server(cmd: &str) -> IrcServer {
-        let connection = MockConnection::new(cmd);
-
         let config = Config {
             nickname: Some("Gauss".into()),
             server:   Some("irc.test.net".into()),
@@ -59,6 +57,7 @@ mod tests {
             ..Default::default()
         };
 
+        let connection = MockConnection::new(cmd);
         IrcServer::from_connection(config, connection)
     }
 

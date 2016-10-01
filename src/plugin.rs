@@ -2,8 +2,8 @@ use std::io;
 use irc::client::prelude::*;
 
 pub trait Plugin {
-    fn is_allowed(&self, Message: &Message) -> bool;
-    fn execute(&self, Message: &Message)    -> io::Result<()>;
+    fn is_allowed(&self, Message: &Message)  -> bool;
+    fn execute(&mut self, Message: &Message) -> io::Result<()>;
 }
 
 #[macro_export]

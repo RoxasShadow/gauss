@@ -23,7 +23,7 @@ impl<'a> Plugin for H<'a> {
         }
     }
 
-    fn execute(&self, message: &Message) -> io::Result<()> {
+    fn execute(&mut self, message: &Message) -> io::Result<()> {
         match message.command {
             Command::PRIVMSG(ref target, _) => self.h(message, target),
             _ => Ok(())
@@ -45,8 +45,8 @@ mod tests {
         let server = make_server("PRIVMSG test :h Gauss\r\n");
 
         for message in server.iter() {
-            let message = message.unwrap();
-            let plugin  = H::new(&server);
+            let     message = message.unwrap();
+            let mut plugin  = H::new(&server);
 
             assert!(plugin.is_allowed(&message));
             assert!(plugin.execute(&message).is_ok());

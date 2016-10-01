@@ -54,7 +54,7 @@ impl<'a> Plugin for Url<'a> {
         }
     }
 
-    fn execute(&self, message: &Message) -> io::Result<()> {
+    fn execute(&mut self, message: &Message) -> io::Result<()> {
         match message.command {
             Command::PRIVMSG(ref target, ref msg) => self.url(message, target, msg),
             _ => Ok(())
@@ -76,8 +76,8 @@ mod tests {
         let server = make_server("PRIVMSG test :https://github.com\r\n");
 
         for message in server.iter() {
-            let message = message.unwrap();
-            let plugin  = Url::new(&server);
+            let     message = message.unwrap();
+            let mut plugin  = Url::new(&server);
 
             assert!(plugin.is_allowed(&message));
             assert!(plugin.execute(&message).is_ok());
@@ -92,7 +92,7 @@ mod tests {
 
         for message in server.iter() {
             let message = message.unwrap();
-            let plugin  = Url::new(&server);
+            let mut plugin  = Url::new(&server);
 
             assert!(plugin.is_allowed(&message));
             assert!(plugin.execute(&message).is_ok());
