@@ -14,5 +14,5 @@ irc = "0.11"
 
 regex       = "0.1"
 lazy_static = "0.2"
-
-kuchiki = { version = "0.3", features = ["hyper"] }
+time        = "0.1"
+kuchiki     = { version = "0.3", features = ["hyper"] }

@@ -18,5 +18,18 @@ macro_rules! register_plugin {
                 $t { server: server }
             }
         }
-    }
+    };
+
+    ($t:ident, $element: ident: $ty: ty) => {
+        pub struct $t<'a> {
+            $element: $ty,
+            server: &'a IrcServer
+        }
+
+        impl<'a> $t<'a> {
+            pub fn new(server: &'a IrcServer) -> $t {
+                $t { server: server, $element: <$ty>::new() }
+            }
+        }
+    };
 }

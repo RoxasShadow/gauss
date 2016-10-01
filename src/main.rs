@@ -1,6 +1,7 @@
 extern crate irc;
 extern crate regex;
 extern crate kuchiki;
+extern crate time;
 #[macro_use] extern crate lazy_static;
 
 #[macro_use] mod plugin;
@@ -24,7 +25,8 @@ fn main() {
 
     let mut plugins: Vec<Box<Plugin>> = vec![
         Box::new(plugins::h::H::new(&server)),
-        Box::new(plugins::url::Url::new(&server))
+        Box::new(plugins::url::Url::new(&server)),
+        Box::new(plugins::seen::Seen::new(&server)),
     ];
 
     for message in server.iter() {
