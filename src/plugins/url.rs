@@ -92,23 +92,21 @@ mod tests {
 
         for message in server.iter() {
             let message = message.unwrap();
-            let mut plugin  = Url::new(&server);
-
             assert!(plugin.is_allowed(&message));
             assert!(plugin.execute(&message).is_ok());
         }
 
-        assert_eq!("", &*get_server_value(server));
+        assert_eq!("PRIVMSG test :[URL] How people build software · GitHub\r\n",
+                   &*get_server_value(&server));
     }
 
     #[test]
     fn test_url_not_given() {
         let server = make_server("PRIVMSG test :httplol\r\n");
+        let plugin = Url::new(&server);
 
         for message in server.iter() {
             let message = message.unwrap();
-            let plugin  = Url::new(&server);
-
             assert!(!plugin.is_allowed(&message));
         }
     }

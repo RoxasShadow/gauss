@@ -55,7 +55,7 @@ mod tests {
         IrcServer::from_connection(config, connection)
     }
 
-    pub fn get_server_value(server: IrcServer) -> String {
+    pub fn get_server_value(server: &IrcServer) -> String {
         server.conn().written(server.config().encoding()).unwrap()
     }
 }

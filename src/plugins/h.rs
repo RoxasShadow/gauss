@@ -42,27 +42,25 @@ mod tests {
 
     #[test]
     fn test_allowed() {
-        let server = make_server("PRIVMSG test :h Gauss\r\n");
+        let     server = make_server("PRIVMSG test :h Gauss\r\n");
+        let mut plugin  = H::new(&server);
 
         for message in server.iter() {
-            let     message = message.unwrap();
-            let mut plugin  = H::new(&server);
-
+            let message = message.unwrap();
             assert!(plugin.is_allowed(&message));
             assert!(plugin.execute(&message).is_ok());
         }
 
-        assert_eq!("PRIVMSG test :h \r\n", &*get_server_value(server));
+        assert_eq!("PRIVMSG test :h \r\n", &*get_server_value(&server));
     }
 
     #[test]
     fn test_not_allowed() {
         let server = make_server("PRIVMSG test :h Holo\r\n");
+        let plugin  = H::new(&server);
 
         for message in server.iter() {
             let message = message.unwrap();
-            let plugin  = H::new(&server);
-
             assert!(!plugin.is_allowed(&message));
         }
     }
