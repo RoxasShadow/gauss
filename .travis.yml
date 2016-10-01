@@ -6,10 +6,8 @@ rust:
   - nightly
 
 notifications:
-  email: false
   irc:
     channels:
       - "irc.rizon.net#aggvistnurummor"
     template:
       - "%{repository_slug}/%{branch} (%{commit} - %{author}): %{message}"
-    skip_join: true
