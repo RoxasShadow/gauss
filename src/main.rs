@@ -7,25 +7,9 @@ extern crate kuchiki;
 mod plugins;
 
 use std::default::Default;
-use std::io;
 use irc::client::prelude::*;
 
 use plugin::Plugin;
-
-fn dispatch(server: &IrcServer, message: Message) -> io::Result<()> {
-    let plugins: Vec<Box<Plugin>> = vec![
-        Box::new(plugins::h::H::new(&server)),
-        Box::new(plugins::url::Url::new(&server)),
-    ];
-
-    for mut plugin in plugins {
-        if plugin.is_allowed(&message) {
-            try!(plugin.execute(&message));
-        }
-    }
-
-    Ok(())
-}
 
 fn main() {
     let cfg = Config {
@@ -38,9 +22,19 @@ fn main() {
     let server = IrcServer::from_config(cfg).unwrap();
     server.identify().unwrap();
 
+    let mut plugins: Vec<Box<Plugin>> = vec![
+        Box::new(plugins::h::H::new(&server)),
+        Box::new(plugins::url::Url::new(&server))
+    ];
+
     for message in server.iter() {
         let message = message.unwrap();
-        dispatch(&server, message).unwrap();
+
+        for mut plugin in plugins.iter_mut() {
+            if plugin.is_allowed(&message) {
+                plugin.execute(&message).unwrap();
+            }
+        }
     }
 }
 
