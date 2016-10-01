@@ -73,22 +73,8 @@ mod tests {
 
     #[test]
     fn test_url() {
-        let server = make_server("PRIVMSG test :https://github.com\r\n");
-
-        for message in server.iter() {
-            let     message = message.unwrap();
-            let mut plugin  = Url::new(&server);
-
-            assert!(plugin.is_allowed(&message));
-            assert!(plugin.execute(&message).is_ok());
-        }
-
-        assert_eq!("PRIVMSG test :[URL] How people build software · GitHub\r\n", &*get_server_value(server));
-    }
-
-    #[test]
-    fn test_url_not_found() {
-        let server = make_server("PRIVMSG test :https://lolwut.vbb\r\n");
+        let     server = make_server("PRIVMSG test :https://github.com\r\n");
+        let mut plugin = Url::new(&server);
 
         for message in server.iter() {
             let message = message.unwrap();
