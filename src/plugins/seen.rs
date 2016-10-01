@@ -35,8 +35,8 @@ impl ToString for User {
 
 register_plugin!(Seen, users: Vec<User>);
 
-impl<'a> Seen<'a> {
-    fn grep_username<'b>(&self, msg: &'b str) -> Option<&'b str> {
+impl Seen {
+    fn grep_username<'a>(&self, msg: &'a str) -> Option<&'a str> {
         match RE.captures(&msg) {
             Some(captures) => captures.at(1),
             None           => None
@@ -73,40 +73,40 @@ impl<'a> Seen<'a> {
         Ok(())
     }
 
-    fn seen(&mut self, message: &Message, target: &str, msg: &str) -> io::Result<()> {
+    fn seen(&mut self, server: &IrcServer, message: &Message, target: &str, msg: &str) -> io::Result<()> {
         let username = match self.grep_username(msg) {
             Some(user) => user,
             None      => { return Ok(()); }
         };
 
-        if username == self.server.current_nickname() {
-            return self.server.send_privmsg(target, "That's me!");
+        if username == server.current_nickname() {
+            return server.send_privmsg(target, "That's me!");
         }
 
         let requester = message.source_nickname();
         if requester.is_some() && username == requester.unwrap() {
-            return self.server.send_privmsg(target, "That's you!");
+            return server.send_privmsg(target, "That's you!");
         }
 
         for user in &self.users {
             if user.name == username {
-                return self.server.send_privmsg(target, &user.to_string());
+                return server.send_privmsg(target, &user.to_string());
             }
         }
 
-        self.server.send_privmsg(target,
-                                 &format!("I haven't seen {}", username))
+        server.send_privmsg(target,
+                            &format!("I haven't seen {}", username))
     }
 }
 
-impl<'a> Plugin for Seen<'a> {
-    fn is_allowed(&self, _: &Message) -> bool {
+impl Plugin for Seen {
+    fn is_allowed(&self, _: &IrcServer, _: &Message) -> bool {
         true
     }
 
-    fn execute(&mut self, message: &Message) -> io::Result<()> {
+    fn execute(&mut self, server: &IrcServer, message: &Message) -> io::Result<()> {
         match message.command {
-            Command::PRIVMSG(ref target, ref msg) => self.seen(message, target, msg),
+            Command::PRIVMSG(ref target, ref msg) => self.seen(server, message, target, msg),
             Command::JOIN(_, _, _)                => self.joined(message.source_nickname().map(|n| n.to_owned())),
             Command::PART(_, _)                   => self.parted(message.source_nickname().map(|n| n.to_owned())),
             _ => Ok(())
@@ -131,13 +131,13 @@ mod tests {
     #[test]
     fn test_seen() {
         let     server  = make_server("PRIVMSG test :!seen Holo\r\n");
-        let mut plugin = Seen::new(&server);
+        let mut plugin = Seen::new();
         plugin.users.push(User { name: "Gauss".to_owned(), joined_at: get_time(), parted_at: None });
         plugin.users.push(User { name: "Holo".to_owned(),  joined_at: get_time(), parted_at: Some(get_time()) });
 
         let message = server.iter().last().unwrap().unwrap();
-        assert!(plugin.is_allowed(&message));
-        assert!(plugin.execute(&message).is_ok());
+        assert!(plugin.is_allowed(&server, &message));
+        assert!(plugin.execute(&server, &message).is_ok());
         assert_eq!(plugin.users.len(), 2);
 
         let users: Vec<String> = plugin.users.iter().map(|u| u.name.to_owned()).collect();
@@ -150,12 +150,12 @@ mod tests {
     #[test]
     fn test_its_me() {
         let     server = make_server("PRIVMSG test :!seen Gauss\r\n");
-        let mut plugin = Seen::new(&server);
+        let mut plugin = Seen::new();
         plugin.users.push(User { name: "Gauss".to_owned(), joined_at: get_time(), parted_at: None });
 
         let message = server.iter().last().unwrap().unwrap();
-        assert!(plugin.is_allowed(&message));
-        assert!(plugin.execute(&message).is_ok());
+        assert!(plugin.is_allowed(&server, &message));
+        assert!(plugin.execute(&server, &message).is_ok());
         assert_eq!(plugin.users.len(), 1);
 
         assert_eq!("PRIVMSG test :That's me!\r\n", &*get_server_value(&server));
@@ -164,12 +164,12 @@ mod tests {
     #[test]
     fn test_not_seen() {
         let     server = make_server("PRIVMSG test :!seen Holo\r\n");
-        let mut plugin = Seen::new(&server);
+        let mut plugin = Seen::new();
         plugin.users.push(User { name: "Gauss".to_owned(), joined_at: get_time(), parted_at: None });
 
         let message = server.iter().last().unwrap().unwrap();
-        assert!(plugin.is_allowed(&message));
-        assert!(plugin.execute(&message).is_ok());
+        assert!(plugin.is_allowed(&server, &message));
+        assert!(plugin.execute(&server, &message).is_ok());
         assert_eq!(plugin.users.len(), 1);
 
         assert_eq!("PRIVMSG test :I haven't seen Holo\r\n", &*get_server_value(&server));

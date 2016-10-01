@@ -12,7 +12,7 @@ lazy_static! {
     static ref RE: Regex = Regex::new(r"http(s)?://(\S+)").unwrap();
 }
 
-impl<'a> Url<'a> {
+impl Url {
     fn grep_url(&self, msg: &str) -> Option<String> {
         match RE.captures(msg) {
             Some(captures) => {
@@ -27,7 +27,7 @@ impl<'a> Url<'a> {
         }
     }
 
-    fn url(&self, _: &Message, target: &str, msg: &str) -> io::Result<()> {
+    fn url(&self, server: &IrcServer, _: &Message, target: &str, msg: &str) -> io::Result<()> {
         let url = match self.grep_url(msg) {
             Some(url) => url,
             None      => { return Ok(()); }
@@ -37,8 +37,8 @@ impl<'a> Url<'a> {
             let matches = doc.select("title").unwrap().last().unwrap();
             let node    = matches.as_node().first_child().unwrap();
             let title   = node.as_text().unwrap().borrow();
-            self.server.send_privmsg(target,
-                                     &format!("[URL] {}", &*title))
+            server.send_privmsg(target,
+                                &format!("[URL] {}", &*title))
         }
         else {
             Ok(())
@@ -46,17 +46,17 @@ impl<'a> Url<'a> {
     }
 }
 
-impl<'a> Plugin for Url<'a> {
-    fn is_allowed(&self, message: &Message) -> bool {
+impl Plugin for Url {
+    fn is_allowed(&self, _: &IrcServer, message: &Message) -> bool {
         match message.command {
             Command::PRIVMSG(_, ref msg) => RE.is_match(msg),
             _ => false
         }
     }
 
-    fn execute(&mut self, message: &Message) -> io::Result<()> {
+    fn execute(&mut self, server: &IrcServer, message: &Message) -> io::Result<()> {
         match message.command {
-            Command::PRIVMSG(ref target, ref msg) => self.url(message, target, msg),
+            Command::PRIVMSG(ref target, ref msg) => self.url(server, message, target, msg),
             _ => Ok(())
         }
     }
@@ -74,12 +74,12 @@ mod tests {
     #[test]
     fn test_url() {
         let     server = make_server("PRIVMSG test :https://github.com\r\n");
-        let mut plugin = Url::new(&server);
+        let mut plugin = Url::new();
 
         for message in server.iter() {
             let message = message.unwrap();
-            assert!(plugin.is_allowed(&message));
-            assert!(plugin.execute(&message).is_ok());
+            assert!(plugin.is_allowed(&server, &message));
+            assert!(plugin.execute(&server, &message).is_ok());
         }
 
         assert_eq!("PRIVMSG test :[URL] How people build software · GitHub\r\n",
@@ -89,11 +89,11 @@ mod tests {
     #[test]
     fn test_url_not_given() {
         let server = make_server("PRIVMSG test :httplol\r\n");
-        let plugin = Url::new(&server);
+        let plugin = Url::new();
 
         for message in server.iter() {
             let message = message.unwrap();
-            assert!(!plugin.is_allowed(&message));
+            assert!(!plugin.is_allowed(&server, &message));
         }
     }
 }

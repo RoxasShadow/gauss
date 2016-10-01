@@ -8,6 +8,8 @@ extern crate time;
 mod plugins;
 
 use std::default::Default;
+use std::thread::spawn;
+use std::sync::{Arc, Mutex};
 use irc::client::prelude::*;
 
 use plugin::Plugin;
@@ -23,21 +25,33 @@ fn main() {
     let server = IrcServer::from_config(cfg).unwrap();
     server.identify().unwrap();
 
-    let mut plugins: Vec<Box<Plugin>> = vec![
-        Box::new(plugins::h::H::new(&server)),
-        Box::new(plugins::url::Url::new(&server)),
-        Box::new(plugins::seen::Seen::new(&server)),
+    let plugins: Vec<Arc<Mutex<Plugin>>> = vec![
+        Arc::new(Mutex::new(plugins::h::H::new())),
+        Arc::new(Mutex::new(plugins::url::Url::new())),
+        Arc::new(Mutex::new(plugins::seen::Seen::new()))
     ];
 
     for message in server.iter() {
-        let message = message.unwrap();
+        let message = Arc::new(message.unwrap());
 
-        for mut plugin in plugins.iter_mut() {
-            if plugin.is_allowed(&message) {
-                plugin.execute(&message).unwrap();
-            }
+        for plugin in plugins.clone().into_iter() {
+            let server  = server.clone();
+            let message = message.clone();
+
+            spawn(move || {
+                let mut plugin = match plugin.lock() {
+                    Ok(plugin)    => plugin,
+                    Err(poisoned) => poisoned.into_inner()
+                };
+
+                if plugin.is_allowed(&server, &message) {
+                    plugin.execute(&server, &message).unwrap();
+                }
+            });
         }
     }
+
+    loop {}
 }
 
 #[cfg(test)]

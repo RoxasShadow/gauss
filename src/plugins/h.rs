@@ -4,28 +4,28 @@ use plugin::Plugin;
 
 register_plugin!(H);
 
-impl<'a> H<'a> {
-    fn h(&self, message: &Message, target: &str) -> io::Result<()> {
+impl H {
+    fn h(&self, server: &IrcServer, message: &Message, target: &str) -> io::Result<()> {
         let nickname = message.source_nickname().unwrap_or("");
-        self.server.send_privmsg(target,
-                                 &format!("h {}", nickname))
+        server.send_privmsg(target,
+                            &format!("h {}", nickname))
     }
 }
 
-impl<'a> Plugin for H<'a> {
-    fn is_allowed(&self, message: &Message) -> bool {
+impl Plugin for H {
+    fn is_allowed(&self, server: &IrcServer, message: &Message) -> bool {
         match message.command {
             Command::PRIVMSG(_, ref msg) => {
-                let my_name = self.server.current_nickname();
+                let my_name = server.current_nickname();
                 msg.trim() == &format!("h {}", my_name)
             },
             _ => false
         }
     }
 
-    fn execute(&mut self, message: &Message) -> io::Result<()> {
+    fn execute(&mut self, server: &IrcServer, message: &Message) -> io::Result<()> {
         match message.command {
-            Command::PRIVMSG(ref target, _) => self.h(message, target),
+            Command::PRIVMSG(ref target, _) => self.h(server, message, target),
             _ => Ok(())
         }
     }
@@ -43,12 +43,12 @@ mod tests {
     #[test]
     fn test_allowed() {
         let     server = make_server("PRIVMSG test :h Gauss\r\n");
-        let mut plugin  = H::new(&server);
+        let mut plugin  = H::new();
 
         for message in server.iter() {
             let message = message.unwrap();
-            assert!(plugin.is_allowed(&message));
-            assert!(plugin.execute(&message).is_ok());
+            assert!(plugin.is_allowed(&server, &message));
+            assert!(plugin.execute(&server, &message).is_ok());
         }
 
         assert_eq!("PRIVMSG test :h \r\n", &*get_server_value(&server));
@@ -57,11 +57,11 @@ mod tests {
     #[test]
     fn test_not_allowed() {
         let server = make_server("PRIVMSG test :h Holo\r\n");
-        let plugin  = H::new(&server);
+        let plugin  = H::new();
 
         for message in server.iter() {
             let message = message.unwrap();
-            assert!(!plugin.is_allowed(&message));
+            assert!(!plugin.is_allowed(&server, &message));
         }
     }
 }
