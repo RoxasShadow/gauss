@@ -10,4 +10,4 @@ notifications:
     channels:
       - "irc.rizon.net#aggvistnurummor"
     template:
-      - "%{repository_slug}/%{branch} (%{commit} - %{author}): %{message}"
+      - "%{repository_slug}/%{branch} (%{commit} - %{commit_subject} - %{author}): %{message} (%{elapsed_time})"
