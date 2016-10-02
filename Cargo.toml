@@ -16,7 +16,4 @@ regex       = "0.1"
 lazy_static = "0.2"
 time        = "0.1"
 kuchiki     = { version = "0.3", features = ["hyper"] }
-
-[dependencies.rustfm]
-git     = "https://github.com/RoxasShadow/rustfm"
-branch  = "0.1"
+rustfm      = "0.1"
