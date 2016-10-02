@@ -2,6 +2,7 @@ extern crate irc;
 extern crate regex;
 extern crate kuchiki;
 extern crate time;
+extern crate rustfm;
 #[macro_use] extern crate lazy_static;
 
 #[macro_use] mod plugin;
@@ -28,7 +29,8 @@ fn main() {
     let plugins: Vec<Arc<Mutex<Plugin>>> = vec![
         Arc::new(Mutex::new(plugins::h::H::new())),
         Arc::new(Mutex::new(plugins::url::Url::new())),
-        Arc::new(Mutex::new(plugins::seen::Seen::new()))
+        Arc::new(Mutex::new(plugins::seen::Seen::new())),
+        Arc::new(Mutex::new(plugins::lastfm::LastFM::new())),
     ];
 
     for message in server.iter() {
