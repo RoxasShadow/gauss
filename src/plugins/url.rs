@@ -34,15 +34,15 @@ impl Url {
         };
 
         if let Ok(doc) = kuchiki::parse_html().from_http(&url) {
-            let matches = doc.select("title").unwrap().last().unwrap();
-            let node    = matches.as_node().first_child().unwrap();
-            let title   = node.as_text().unwrap().borrow();
-            server.send_privmsg(target,
-                                &format!("[URL] {}", &*title))
+            if let Some(match_) = doc.select("title").unwrap().last() {
+                let node    = match_.as_node().first_child().unwrap();
+                let title   = node.as_text().unwrap().borrow();
+                return server.send_privmsg(target,
+                                           &format!("[URL] {}", &*title))
+            }
         }
-        else {
-            Ok(())
-        }
+
+        Ok(())
     }
 }
 
@@ -85,6 +85,21 @@ mod tests {
         assert_eq!("PRIVMSG test :[URL] How people build software · GitHub\r\n",
                    &*get_server_value(&server));
     }
+
+    #[test]
+    fn test_url_no_title() {
+        let     server = make_server("PRIVMSG test :https://crates.io/crates/gauss\r\n");
+        let mut plugin = Url::new();
+
+        for message in server.iter() {
+            let message = message.unwrap();
+            assert!(plugin.is_allowed(&server, &message));
+            assert!(plugin.execute(&server, &message).is_ok());
+        }
+
+        assert_eq!("", &*get_server_value(&server));
+    }
+
 
     #[test]
     fn test_url_not_given() {
