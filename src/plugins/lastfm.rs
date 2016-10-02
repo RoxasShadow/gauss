@@ -35,8 +35,8 @@ impl LastFM {
                         lastfm_username: lastfm_username.to_owned()
                     };
 
-                    if !self.users.contains(&user) {
-                        self.users.push(user.clone());
+                    if let Some(index) = self.users.iter().position(|u| u.irc_username == nickname) {
+                        self.users.remove(index);
                     }
                     else {
                         if let Some(index) = self.users.iter().position(|u| u.irc_username == nickname) {
@@ -44,6 +44,8 @@ impl LastFM {
                             self.users.push(user.clone());
                         }
                     }
+
+                    self.users.push(user.clone());
 
                     server.send_privmsg(target,
                                         &*format!("{} is now associated to the LastFM user {}", user.irc_username, user.lastfm_username))
