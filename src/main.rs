@@ -8,6 +8,7 @@ extern crate rustfm;
 #[macro_use] mod plugin;
 mod plugins;
 
+use std::env;
 use std::default::Default;
 use std::thread::spawn;
 use std::sync::{Arc, Mutex};
@@ -16,14 +17,21 @@ use irc::client::prelude::*;
 use plugin::Plugin;
 
 fn main() {
-    let cfg = Config {
-        nickname: Some("Gauss".into()),
-        server:   Some("irc.rizon.net".into()),
-        channels: Some(vec!["#aggvistnurummor".into()]),
+    let mut args = env::args();
+
+    let exe_name = args.next().unwrap();
+    if args.len() < 3 {
+        panic!("Usage: {} [nickname] [server] [\"#channel1\" \"#channel2\"...]", exe_name);
+    }
+
+    let config = Config {
+        nickname: args.next(),
+        server:   args.next(),
+        channels: Some(args.collect::<Vec<String>>()),
         ..Default::default()
     };
 
-    let server = IrcServer::from_config(cfg).unwrap();
+    let server = IrcServer::from_config(config).unwrap();
     server.identify().unwrap();
 
     let plugins: Vec<Arc<Mutex<Plugin>>> = vec![
