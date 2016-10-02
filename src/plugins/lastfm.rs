@@ -64,6 +64,7 @@ impl LastFM {
             };
         }
 
+
         match message.source_nickname() {
             Some(nickname) => {
                 let username = if let Some(user) = self.users.iter().find(|u| u.irc_username == nickname) {
@@ -76,15 +77,15 @@ impl LastFM {
                 match CLIENT.lock().unwrap().recent_tracks(&*username).with_limit(1).send() {
                     Ok(recent_tracks) => match recent_tracks.tracks.first() {
                         Some(track) => server.send_privmsg(target,
-                                                           &*format!("The last song {} listened to is {} by {} (in {}), on {})",
+                                                           &*format!("The last song {} listened to is {} by {} (in {}){})",
                                                            username,
                                                            track.name,
                                                            track.artist,
                                                            track.album,
-                                                           track.date)),
+                                                           if let Some(ref date) = track.date { format!(", on {}", date) } else { String::new() })),
                         None => server.send_privmsg(target, &*format!("I don't know what is the last song {} listened to. Try !addlastfmuser", nickname))
                     },
-                    Err(_) => server.send_privmsg(target, &*format!("I don't know what is the last song {} listened to. Try !addlastfmuser", nickname))
+                    Err(e) => server.send_privmsg(target, &*format!("Something bad happened: {:?}", e))
                 }
             },
             None => Ok(())
