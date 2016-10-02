@@ -38,6 +38,12 @@ impl LastFM {
                     if !self.users.contains(&user) {
                         self.users.push(user.clone());
                     }
+                    else {
+                        if let Some(index) = self.users.iter().position(|u| u.irc_username == nickname) {
+                            self.users.remove(index);
+                            self.users.push(user.clone());
+                        }
+                    }
 
                     server.send_privmsg(target,
                                         &*format!("{} is now associated to the LastFM user {}", user.irc_username, user.lastfm_username))
@@ -74,9 +80,9 @@ impl LastFM {
                                                            track.artist,
                                                            track.album,
                                                            track.date)),
-                        None => server.send_privmsg(target, &*format!("I don't know what is the last song {} listened to", nickname))
+                        None => server.send_privmsg(target, &*format!("I don't know what is the last song {} listened to. Try !addlastfmuser", nickname))
                     },
-                    Err(_) => server.send_privmsg(target, &*format!("I don't know what is the last song {} listened to", nickname))
+                    Err(_) => server.send_privmsg(target, &*format!("I don't know what is the last song {} listened to. Try !addlastfmuser", nickname))
                 }
             },
             None => Ok(())
