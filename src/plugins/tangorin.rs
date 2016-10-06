@@ -71,24 +71,41 @@ impl Tangorin {
     
     fn retrieve_meaning(&self, doc: &kuchiki::NodeRef) -> Option<String> {
         if let Some(match_) = doc.select("span[class=eng]").unwrap().next() {
-            println!("match_ {:?}", match_);
-            //let node = match_.as_node().first_child().unwrap();
-            let node = match_.as_node().first_child();
-            println!("node {:?}", node);
-            let wownode = node.unwrap();
-//            println!("node.as_text {:?}", node.unwrap().as_text());
-            let borrowed_meaning = wownode.as_text().unwrap().borrow();
-            let mut meaning = borrowed_meaning.clone();
-            meaning = meaning.trim().to_string();
+            let node = match_.as_node(); 
+            let children = node.children();
+            let mut meaning = "".to_string();
+            for child_ in children {
+                if let Some(text_) = child_.as_text() {
+                    meaning.push_str(text_.borrow().as_str());
+                }
+                else{
+                    if let Some(text_) = self.deeper_text(&child_) {
+                        meaning.push_str(text_.as_str());
+                    }
+                }
+            }
 
-            Some(meaning)
+           Some(meaning)
+        }
+        else{
+            None
+        }
+    }
+
+    fn deeper_text(&self, root: &kuchiki::NodeRef) -> Option<String> {
+        if let Some(match_) = root.first_child() {
+            let res = match match_.as_text() {
+                Some(result_str) => result_str.borrow(),
+                None => { return None }
+            };
+            Some(res.clone())
         }
         else {
             None
         }
     }
 
-    fn url(&self, server: &IrcServer, _: &Message, target: &str, msg: &str) -> io::Result<()> {
+    fn tangorin(&self, server: &IrcServer, _: &Message, target: &str, msg: &str) -> io::Result<()> {
         let url = match self.grep_url(msg) {
             Some(kanji) => "http://tangorin.com/general/".to_string() + kanji.as_str(),
             None      => { return Ok(()); }
@@ -115,13 +132,12 @@ impl Tangorin {
                 None => { return Ok(()); }
             };
          
-            //let meaning = match self.retrieve_meaning(&doc) {
-            //    Some(retrieved) => retrieved,
-            //    None => { return Ok(()); }
-            //};
+            let meaning = match self.retrieve_meaning(&doc) {
+                Some(retrieved) => retrieved,
+                None => { return Ok(()); }
+            };
           
-            //return server.send_privmsg(target, &format!("[Tangorin] {} ({} - {}): {}", &*retrieved_kanji, &*kana, &*romaji, &* meaning))
-            return server.send_privmsg(target, &format!("[Tangorin] {} ({} - {})", &*retrieved_kanji, &*kana, &*romaji))
+            return server.send_privmsg(target, &format!("[Tangorin] {} ({} - {}): {}", &*retrieved_kanji, &*kana, &*romaji, &* meaning))
         }
 
         Ok(())
@@ -138,7 +154,7 @@ impl Plugin for Tangorin {
 
     fn execute(&mut self, server: &IrcServer, message: &Message) -> io::Result<()> {
         match message.command {
-            Command::PRIVMSG(ref target, ref msg) => self.url(server, message, target, msg),
+            Command::PRIVMSG(ref target, ref msg) => self.tangorin(server, message, target, msg),
             _ => Ok(())
         }
     }
@@ -154,7 +170,7 @@ mod tests {
     use super::Tangorin;
 
     #[test]
-    fn test_url() {
+    fn test_tangorin() {
         let     server = make_server("PRIVMSG test :!tangorin 桜\r\n");
         let mut plugin = Tangorin::new();
 
@@ -164,12 +180,27 @@ mod tests {
             assert!(plugin.execute(&server, &message).is_ok());
         }
 
-        assert_eq!("PRIVMSG test :[Tangorin] 桜 (さくら - sakura): cherry tree;  cherry blossom (colloquialism)\r\n",
+        assert_eq!("PRIVMSG test :[Tangorin] 桜 (さくら - sakura): cherry tree;  cherry blossom\r\n",
                    &*get_server_value(&server));
     }
 
     #[test]
-    fn test_url_no_title() {
+    fn test_tangorin_write_explanation() {
+        let     server = make_server("PRIVMSG test :!tangorin 頑\r\n");
+        let mut plugin = Tangorin::new();
+
+        for message in server.iter() {
+            let message = message.unwrap();
+            assert!(plugin.is_allowed(&server, &message));
+            assert!(plugin.execute(&server, &message).is_ok());
+        }
+        assert_eq!("PRIVMSG test :[Tangorin] 頑な (かたくな - katakuna): obstinate (usually written using kana alone)\r\n",
+                   &*get_server_value(&server));
+    }
+
+
+    #[test]
+    fn test_tangorin_missing_argument() {
         let     server = make_server("PRIVMSG test :!tangorin            \r\n");
         let mut plugin = Tangorin::new();
 
@@ -181,7 +212,7 @@ mod tests {
 
 
     #[test]
-    fn test_url_not_given() {
+    fn test_tangorin_not_called() {
         let server = make_server("PRIVMSG test :httplol\r\n");
         let plugin = Tangorin::new();
 
