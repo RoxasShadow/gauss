@@ -55,6 +55,39 @@ impl Tangorin {
         }
     }
 
+    fn retrieve_kanji(&self, doc: &kuchiki::NodeRef) -> Option<String> {
+        if let Some(match_) = doc.select("span[class=writing]").unwrap().next() {
+            let node = match_.as_node().first_child().unwrap();
+            let borrowed_kanji = node.as_text().unwrap().borrow();
+            let mut realkanji = borrowed_kanji.clone();
+            realkanji = realkanji.trim().to_string();
+
+            Some(realkanji)
+        }
+        else {
+            None
+        }
+    }
+    
+    fn retrieve_meaning(&self, doc: &kuchiki::NodeRef) -> Option<String> {
+        if let Some(match_) = doc.select("span[class=eng]").unwrap().next() {
+            println!("match_ {:?}", match_);
+            //let node = match_.as_node().first_child().unwrap();
+            let node = match_.as_node().first_child();
+            println!("node {:?}", node);
+            let wownode = node.unwrap();
+//            println!("node.as_text {:?}", node.unwrap().as_text());
+            let borrowed_meaning = wownode.as_text().unwrap().borrow();
+            let mut meaning = borrowed_meaning.clone();
+            meaning = meaning.trim().to_string();
+
+            Some(meaning)
+        }
+        else {
+            None
+        }
+    }
+
     fn url(&self, server: &IrcServer, _: &Message, target: &str, msg: &str) -> io::Result<()> {
         let url = match self.grep_url(msg) {
             Some(kanji) => "http://tangorin.com/general/".to_string() + kanji.as_str(),
@@ -76,9 +109,19 @@ impl Tangorin {
                 Some(retrieved) => retrieved,
                 None => { return Ok(()); } 
             };
+         
+            let retrieved_kanji = match self.retrieve_kanji(&doc) {
+                Some(retrieved) => retrieved,
+                None => { return Ok(()); }
+            };
+         
+            //let meaning = match self.retrieve_meaning(&doc) {
+            //    Some(retrieved) => retrieved,
+            //    None => { return Ok(()); }
+            //};
           
-           return server.send_privmsg(target, &format!("[Tangorin] {} ({} - {}): ...", &*kanji, &*kana, &*romaji))
-
+            //return server.send_privmsg(target, &format!("[Tangorin] {} ({} - {}): {}", &*retrieved_kanji, &*kana, &*romaji, &* meaning))
+            return server.send_privmsg(target, &format!("[Tangorin] {} ({} - {})", &*retrieved_kanji, &*kana, &*romaji))
         }
 
         Ok(())
