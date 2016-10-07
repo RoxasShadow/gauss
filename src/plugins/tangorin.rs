@@ -13,15 +13,10 @@ lazy_static! {
 }
 
 impl Tangorin {
-    fn grep_url(&self, msg: &str) -> Option<String> {
+    fn grep_kanji(&self, msg: &str) -> Option<String> {
         match RE.captures(msg) {
             Some(captures) => {
-                if captures.len() == 3 {
-                    Some(format!("{}", captures.at(2).unwrap()))
-                }
-                else {
-                    Some(format!("{}", captures.at(1).unwrap()))
-                }
+                Some(format!("{}", captures.at(1).unwrap()))
             },
             None => None
         }
@@ -98,7 +93,7 @@ impl Tangorin {
     }
 
     fn tangorin(&self, server: &IrcServer, _: &Message, target: &str, msg: &str) -> io::Result<()> {
-        let url = match self.grep_url(msg) {
+        let url = match self.grep_kanji(msg) {
             Some(kanji) => "http://tangorin.com/general/".to_string() + kanji.as_str(),
             None      => { return Ok(()); }
         };
