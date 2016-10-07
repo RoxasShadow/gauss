@@ -27,48 +27,20 @@ impl Tangorin {
         }
     }
 
-    fn retrieve_romaji(&self, doc: &kuchiki::NodeRef) -> Option<String> {
-        if let Some(match_) = doc.select("rt").unwrap().next() {
+    fn retrieve_from_selector(&self, doc: &kuchiki::NodeRef, selector: &str) -> Option<String> {
+        if let Some(match_) = doc.select(selector).unwrap().next() {
             let node    = match_.as_node().first_child().unwrap();
-            let borrowed_romaji   = node.as_text().unwrap().borrow();
-            let mut romaji = borrowed_romaji.clone();
-            romaji = romaji.trim().to_string();
+            let borrowed_text   = node.as_text().unwrap().borrow();
+            let mut retrieved_text = borrowed_text.clone();
+            retrieved_text = retrieved_text.trim().to_string();
             
-            Some(romaji)
-        }
-        else{
-            None
-        }
-    }
-    
-    fn retrieve_kana(&self, doc: &kuchiki::NodeRef) -> Option<String> {
-        if let Some(match_) = doc.select("rb").unwrap().next() {
-            let node    = match_.as_node().first_child().unwrap();
-            let borrowed_kana   = node.as_text().unwrap().borrow();
-            let mut kana = borrowed_kana.clone();
-            kana = kana.trim().to_string();
-            
-            Some(kana)
+            Some(retrieved_text)
         }
         else{
             None
         }
     }
 
-    fn retrieve_kanji(&self, doc: &kuchiki::NodeRef) -> Option<String> {
-        if let Some(match_) = doc.select("span[class=writing]").unwrap().next() {
-            let node = match_.as_node().first_child().unwrap();
-            let borrowed_kanji = node.as_text().unwrap().borrow();
-            let mut realkanji = borrowed_kanji.clone();
-            realkanji = realkanji.trim().to_string();
-
-            Some(realkanji)
-        }
-        else {
-            None
-        }
-    }
-    
     fn retrieve_meaning(&self, doc: &kuchiki::NodeRef) -> Option<String> {
         if let Some(match_) = doc.select("span[class=eng]").unwrap().next() {
             let node = match_.as_node(); 
@@ -79,7 +51,7 @@ impl Tangorin {
                     meaning.push_str(text_.borrow().as_str());
                 }
                 else{
-                    if let Some(text_) = self.deeper_text(&child_) {
+                    if let Some(text_) = self.inner_text(&child_) {
                         meaning.push_str(text_.as_str());
                     }
                 }
@@ -95,11 +67,11 @@ impl Tangorin {
     fn retrieve_info(&self, doc: &kuchiki::NodeRef) -> Option<String> {
         if let Some(match_) = doc.select("span[class=eng]").unwrap().next() {
             let node = match_.as_node();
-            let mut following_siblings = node.following_siblings();
+            let following_siblings = node.following_siblings();
 
             if let Ok(mut info_sibs) = following_siblings.select("i[class=d-info]") {
                 match info_sibs.next() {
-                    Some(first_sibling) => self.deeper_text(first_sibling.as_node()),
+                    Some(first_sibling) => self.inner_text(first_sibling.as_node()),
                     None => None
                 }
             }
@@ -112,7 +84,7 @@ impl Tangorin {
         }
     }
 
-    fn deeper_text(&self, root: &kuchiki::NodeRef) -> Option<String> {
+    fn inner_text(&self, root: &kuchiki::NodeRef) -> Option<String> {
         if let Some(match_) = root.first_child() {
             let res = match match_.as_text() {
                 Some(result_str) => result_str.borrow(),
@@ -132,22 +104,17 @@ impl Tangorin {
         };
 
         if let Ok(doc) = kuchiki::parse_html().from_http(&url) {
-            let kanji : String = match self.grep_url(msg){
-                Some(k) => k,
-                None => { return Ok(()); }
-            };
-          
-            let romaji = match self.retrieve_romaji(&doc) {
+            let romaji = match self.retrieve_from_selector(&doc, "rt"){
                 Some(retrieved) => retrieved,
                 None => { return Ok(()); } 
             };
             
-            let kana = match self.retrieve_kana(&doc) {
+            let kana = match self.retrieve_from_selector(&doc, "rb") {
                 Some(retrieved) => retrieved,
                 None => { return Ok(()); } 
             };
          
-            let retrieved_kanji = match self.retrieve_kanji(&doc) {
+            let kanji = match self.retrieve_from_selector(&doc, "span[class=writing]") {
                 Some(retrieved) => retrieved,
                 None => { return Ok(()); }
             };
@@ -165,7 +132,7 @@ impl Tangorin {
                 None => "".to_string()
             };
           
-            return server.send_privmsg(target, &format!("[Tangorin] {} ({} - {}): {}{}", &*retrieved_kanji, &*kana, &*romaji, &*meaning, &*info))
+            return server.send_privmsg(target, &format!("[Tangorin] {} ({} - {}): {}{}", &*kanji, &*kana, &*romaji, &*meaning, &*info))
         }
 
         Ok(())
@@ -229,8 +196,8 @@ mod tests {
 
     #[test]
     fn test_tangorin_missing_argument() {
-        let     server = make_server("PRIVMSG test :!tangorin            \r\n");
-        let mut plugin = Tangorin::new();
+        let server = make_server("PRIVMSG test :!tangorin            \r\n");
+        let plugin = Tangorin::new();
 
         for message in server.iter() {
             let message = message.unwrap();
