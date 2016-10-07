@@ -92,6 +92,26 @@ impl Tangorin {
         }
     }
 
+    fn retrieve_info(&self, doc: &kuchiki::NodeRef) -> Option<String> {
+        if let Some(match_) = doc.select("span[class=eng]").unwrap().next() {
+            let node = match_.as_node();
+            let mut following_siblings = node.following_siblings();
+
+            if let Ok(mut info_sibs) = following_siblings.select("i[class=d-info]") {
+                match info_sibs.next() {
+                    Some(first_sibling) => self.deeper_text(first_sibling.as_node()),
+                    None => None
+                }
+            }
+            else{
+                None
+            }
+        }
+        else {
+            None
+        }
+    }
+
     fn deeper_text(&self, root: &kuchiki::NodeRef) -> Option<String> {
         if let Some(match_) = root.first_child() {
             let res = match match_.as_text() {
@@ -136,8 +156,16 @@ impl Tangorin {
                 Some(retrieved) => retrieved,
                 None => { return Ok(()); }
             };
+
+            let info : String = match self.retrieve_info(&doc) {
+                Some(retrieved) => {
+                    let sanitized = retrieved.replace("\u{2014}", "").replace(".", "").to_lowercase();
+                    (" (".to_string()+sanitized.as_str()+")").to_string()
+                },
+                None => "".to_string()
+            };
           
-            return server.send_privmsg(target, &format!("[Tangorin] {} ({} - {}): {}", &*retrieved_kanji, &*kana, &*romaji, &* meaning))
+            return server.send_privmsg(target, &format!("[Tangorin] {} ({} - {}): {}{}", &*retrieved_kanji, &*kana, &*romaji, &*meaning, &*info))
         }
 
         Ok(())
