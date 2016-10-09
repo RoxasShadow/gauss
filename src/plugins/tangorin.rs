@@ -15,19 +15,16 @@ lazy_static! {
 impl Tangorin {
     fn grep_kanji(&self, msg: &str) -> Option<String> {
         match RE.captures(msg) {
-            Some(captures) => {
-                Some(format!("{}", captures.at(1).unwrap()))
-            },
+            Some(captures) => captures.at(1).map(|e| e.to_owned()),
             None => None
         }
     }
 
     fn retrieve_from_selector(&self, doc: &kuchiki::NodeRef, selector: &str) -> Option<String> {
         if let Some(match_) = doc.select(selector).unwrap().next() {
-            let node    = match_.as_node().first_child().unwrap();
-            let borrowed_text   = node.as_text().unwrap().borrow();
-            let mut retrieved_text = borrowed_text.clone();
-            retrieved_text = retrieved_text.trim().to_string();
+            let node = match_.as_node().first_child().unwrap();
+            let borrowed_text = node.as_text().unwrap().borrow();
+            let retrieved_text = borrowed_text.clone().trim().to_string();
             
             Some(retrieved_text)
         }
@@ -40,14 +37,14 @@ impl Tangorin {
         if let Some(match_) = doc.select("span[class=eng]").unwrap().next() {
             let node = match_.as_node(); 
             let children = node.children();
-            let mut meaning = "".to_string();
-            for child_ in children {
-                if let Some(text_) = child_.as_text() {
-                    meaning.push_str(text_.borrow().as_str());
+            let mut meaning = String::new();
+            for child in children {
+                if let Some(text) = child.as_text() {
+                    meaning.push_str(text.borrow().as_str());
                 }
                 else{
-                    if let Some(text_) = self.inner_text(&child_) {
-                        meaning.push_str(text_.as_str());
+                    if let Some(text) = self.inner_text(&child) {
+                        meaning.push_str(text.as_str());
                     }
                 }
             }
@@ -94,7 +91,7 @@ impl Tangorin {
 
     fn tangorin(&self, server: &IrcServer, _: &Message, target: &str, msg: &str) -> io::Result<()> {
         let url = match self.grep_kanji(msg) {
-            Some(kanji) => "http://tangorin.com/general/".to_string() + kanji.as_str(),
+            Some(kanji) => format!("http://tangorin.com/general/{}", kanji),
             None      => { return Ok(()); }
         };
 
@@ -121,10 +118,9 @@ impl Tangorin {
 
             let info : String = match self.retrieve_info(&doc) {
                 Some(retrieved) => {
-                    let sanitized = retrieved.replace("\u{2014}", "").replace(".", "").to_lowercase();
-                    (" (".to_string()+sanitized.as_str()+")").to_string()
+                    format!(" ({})", retrieved.replace("\u{2014}", "").replace(".", "").to_lowercase())
                 },
-                None => "".to_string()
+                None => String::new()
             };
           
             return server.send_privmsg(target, &format!("[Tangorin] {} ({} - {}): {}{}", &*kanji, &*kana, &*romaji, &*meaning, &*info))
@@ -188,7 +184,6 @@ mod tests {
                    &*get_server_value(&server));
     }
 
-
     #[test]
     fn test_tangorin_missing_argument() {
         let server = make_server("PRIVMSG test :!tangorin            \r\n");
@@ -199,7 +194,6 @@ mod tests {
             assert!(!plugin.is_allowed(&server, &message));
         }
     }
-
 
     #[test]
     fn test_tangorin_not_called() {
