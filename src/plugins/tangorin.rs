@@ -30,71 +30,67 @@ impl Tangorin {
     }
 
     fn retrieve_from_selector(&self, doc: &kuchiki::NodeRef, selector: &str) -> Option<String> {
-        if let Some(match_) = doc.select(selector).unwrap().next() {
-            let node = match_.as_node().first_child().unwrap();
-            let borrowed_text = node.as_text().unwrap().borrow();
-            let retrieved_text = borrowed_text.clone().trim().to_string();
-            
-            Some(retrieved_text)
-        }
-        else{
-            None
+        match doc.select(selector).unwrap().next() {
+            Some(match_) => {
+                let node = match_.as_node().first_child().unwrap();
+                let borrowed_text = node.as_text().unwrap().borrow();
+                Some(borrowed_text.clone().trim().to_string())
+            },
+            None => None
         }
     }
 
     fn retrieve_meaning(&self, doc: &kuchiki::NodeRef) -> Option<String> {
-        if let Some(match_) = doc.select("span[class=eng]").unwrap().next() {
-            let node = match_.as_node(); 
-            let children = node.children();
-            let mut meaning = String::new();
-            for child in children {
-                if let Some(text) = child.as_text() {
-                    meaning.push_str(text.borrow().as_str());
-                }
-                else{
-                    if let Some(text) = self.inner_text(&child) {
-                        meaning.push_str(text.as_str());
+        match doc.select("span[class=eng]").unwrap().next() {
+            None => None,
+            Some(match_) => {
+                let node_children = match_.as_node().children();
+                let mut meaning = String::new();
+                for child in node_children {
+                    if let Some(text) = child.as_text() {
+                        meaning.push_str(text.borrow().as_str());
+                    }
+                    else{
+                        if let Some(text) = self.inner_text(&child) {
+                            meaning.push_str(text.as_str());
+                        }
                     }
                 }
-            }
 
-           Some(meaning)
-        }
-        else{
-            None
+               Some(meaning)
+            }
         }
     }
 
     fn retrieve_info(&self, doc: &kuchiki::NodeRef) -> Option<String> {
-        if let Some(match_) = doc.select("span[class=eng]").unwrap().next() {
-            let node = match_.as_node();
-            let following_siblings = node.following_siblings();
+        match doc.select("span[class=eng]").unwrap().next() {
+            None => None,
+            Some(match_) => {
+                let node = match_.as_node();
+                let following_siblings = node.following_siblings();
 
-            if let Ok(mut info_sibs) = following_siblings.select("i[class=d-info]") {
-                match info_sibs.next() {
-                    Some(first_sibling) => self.inner_text(first_sibling.as_node()),
-                    None => None
+                match following_siblings.select("i[class=d-info]") {
+                    Err(()) => None,
+                    Ok(mut info_sibs) => {
+                        match info_sibs.next() {
+                            Some(first_sibling) => self.inner_text(first_sibling.as_node()),
+                            None => None
+                        }
+                    }
                 }
             }
-            else{
-                None
-            }
-        }
-        else {
-            None
         }
     }
 
     fn inner_text(&self, root: &kuchiki::NodeRef) -> Option<String> {
-        if let Some(match_) = root.first_child() {
-            let res = match match_.as_text() {
-                Some(result_str) => result_str.borrow(),
-                None => { return None }
-            };
-            Some(res.clone())
-        }
-        else {
-            None
+        match root.first_child(){
+            None => None,
+            Some(match_) => {
+                match match_.as_text() {
+                    Some(result_str) => Some(result_str.borrow().to_owned()),
+                    None => None
+                }
+            }
         }
     }
 
