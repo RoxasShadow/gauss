@@ -12,6 +12,15 @@ lazy_static! {
     static ref RE: Regex = Regex::new(r"!tangorin (\S+)").unwrap();
 }
 
+macro_rules! get_text {
+    ( $( $maybe_text: expr);* ) => {
+       match $($maybe_text)* {
+         Some(text) => text,
+         None => { return Ok(()); }
+       };
+    }
+}
+
 impl Tangorin {
     fn grep_kanji(&self, msg: &str) -> Option<String> {
         match RE.captures(msg) {
@@ -96,33 +105,15 @@ impl Tangorin {
         };
 
         if let Ok(doc) = kuchiki::parse_html().from_http(&url) {
-            let romaji = match self.retrieve_from_selector(&doc, "rt"){
-                Some(retrieved) => retrieved,
-                None => { return Ok(()); } 
-            };
-            
-            let kana = match self.retrieve_from_selector(&doc, "rb") {
-                Some(retrieved) => retrieved,
-                None => { return Ok(()); } 
-            };
-         
-            let kanji = match self.retrieve_from_selector(&doc, "span[class=writing]") {
-                Some(retrieved) => retrieved,
-                None => { return Ok(()); }
-            };
-         
-            let meaning = match self.retrieve_meaning(&doc) {
-                Some(retrieved) => retrieved,
-                None => { return Ok(()); }
-            };
-
+            let romaji = get_text!(self.retrieve_from_selector(&doc, "rt"));
+            let kana = get_text!(self.retrieve_from_selector(&doc, "rb"));
+            let kanji = get_text!(self.retrieve_from_selector(&doc, "span[class=writing]"));
+            let meaning = get_text!(self.retrieve_meaning(&doc));
             let info : String = match self.retrieve_info(&doc) {
-                Some(retrieved) => {
-                    format!(" ({})", retrieved.replace("\u{2014}", "").replace(".", "").to_lowercase())
-                },
+                Some(retrieved) => format!(" ({})", retrieved.replace("\u{2014}", "").replace(".", "").to_lowercase()),
                 None => String::new()
             };
-          
+
             return server.send_privmsg(target, &format!("[Tangorin] {} ({} - {}): {}{}", &*kanji, &*kana, &*romaji, &*meaning, &*info))
         }
 
