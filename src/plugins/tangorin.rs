@@ -12,7 +12,7 @@ lazy_static! {
     static ref RE: Regex = Regex::new(r"!tangorin (\S+)").unwrap();
 }
 
-macro_rules! get_text {
+macro_rules! try_option {
     ( $( $maybe_text: expr);* ) => {
        match $($maybe_text)* {
          Some(text) => text,
@@ -30,36 +30,30 @@ impl Tangorin {
     }
 
     fn retrieve_from_selector(&self, doc: &kuchiki::NodeRef, selector: &str) -> Option<String> {
-        match doc.select(selector).unwrap().next() {
-            Some(match_) => {
+        doc.select(selector).unwrap().next().map(|match_| {
                 let node = match_.as_node().first_child().unwrap();
                 let borrowed_text = node.as_text().unwrap().borrow();
-                Some(borrowed_text.clone().trim().to_string())
-            },
-            None => None
-        }
+                borrowed_text.to_owned().trim().to_string()
+        })
     }
 
     fn retrieve_meaning(&self, doc: &kuchiki::NodeRef) -> Option<String> {
-        match doc.select("span[class=eng]").unwrap().next() {
-            None => None,
-            Some(match_) => {
-                let node_children = match_.as_node().children();
-                let mut meaning = String::new();
-                for child in node_children {
-                    if let Some(text) = child.as_text() {
-                        meaning.push_str(text.borrow().as_str());
-                    }
-                    else{
-                        if let Some(text) = self.inner_text(&child) {
-                            meaning.push_str(text.as_str());
-                        }
+        doc.select("span[class=eng]").unwrap().next().map(|match_| {
+            let node_children = match_.as_node().children();
+            let mut meaning = String::new();
+            for child in node_children {
+                if let Some(text) = child.as_text() {
+                    meaning.push_str(text.borrow().as_str());
+                }
+                else {
+                    if let Some(text) = self.inner_text(&child) {
+                        meaning.push_str(text.as_str());
                     }
                 }
-
-               Some(meaning)
             }
-        }
+
+            meaning
+        })
     }
 
     fn retrieve_info(&self, doc: &kuchiki::NodeRef) -> Option<String> {
@@ -70,13 +64,10 @@ impl Tangorin {
                 let following_siblings = node.following_siblings();
 
                 match following_siblings.select("i[class=d-info]") {
-                    Err(()) => None,
-                    Ok(mut info_sibs) => {
-                        match info_sibs.next() {
-                            Some(first_sibling) => self.inner_text(first_sibling.as_node()),
-                            None => None
-                        }
-                    }
+                    Err(_) => None,
+                    Ok(mut info_sibs) => info_sibs.next().map(|first_sibling|
+                        self.inner_text(first_sibling.as_node()).unwrap()
+                    )
                 }
             }
         }
@@ -101,10 +92,10 @@ impl Tangorin {
         };
 
         if let Ok(doc) = kuchiki::parse_html().from_http(&url) {
-            let romaji = get_text!(self.retrieve_from_selector(&doc, "rt"));
-            let kana = get_text!(self.retrieve_from_selector(&doc, "rb"));
-            let kanji = get_text!(self.retrieve_from_selector(&doc, "span[class=writing]"));
-            let meaning = get_text!(self.retrieve_meaning(&doc));
+            let romaji = try_option!(self.retrieve_from_selector(&doc, "rt"));
+            let kana = try_option!(self.retrieve_from_selector(&doc, "rb"));
+            let kanji = try_option!(self.retrieve_from_selector(&doc, "span[class=writing]"));
+            let meaning = try_option!(self.retrieve_meaning(&doc));
             let info : String = match self.retrieve_info(&doc) {
                 Some(retrieved) => format!(" ({})", retrieved.replace("\u{2014}", "").replace(".", "").to_lowercase()),
                 None => String::new()
