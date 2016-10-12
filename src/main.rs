@@ -39,6 +39,7 @@ fn main() {
         Arc::new(Mutex::new(plugins::url::Url::new())),
         Arc::new(Mutex::new(plugins::seen::Seen::new())),
         Arc::new(Mutex::new(plugins::lastfm::LastFM::new())),
+        Arc::new(Mutex::new(plugins::tangorin::Tangorin::new())),
     ];
 
     for message in server.iter() {
