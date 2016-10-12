@@ -31,9 +31,9 @@ impl Tangorin {
 
     fn retrieve_from_selector(&self, doc: &kuchiki::NodeRef, selector: &str) -> Option<String> {
         doc.select(selector).unwrap().next().map(|match_| {
-                let node = match_.as_node().first_child().unwrap();
-                let borrowed_text = node.as_text().unwrap().borrow();
-                borrowed_text.to_owned().trim().to_string()
+            let node = match_.as_node().first_child().unwrap();
+            let borrowed_text = node.as_text().unwrap().borrow();
+            borrowed_text.to_owned().trim().to_string()
         })
     }
 
@@ -45,10 +45,8 @@ impl Tangorin {
                 if let Some(text) = child.as_text() {
                     meaning.push_str(text.borrow().as_str());
                 }
-                else {
-                    if let Some(text) = self.inner_text(&child) {
-                        meaning.push_str(text.as_str());
-                    }
+                else if let Some(text) = self.inner_text(&child) {
+                    meaning.push_str(text.as_str());
                 }
             }
 
@@ -74,7 +72,7 @@ impl Tangorin {
     }
 
     fn inner_text(&self, root: &kuchiki::NodeRef) -> Option<String> {
-        match root.first_child(){
+        match root.first_child() {
             None => None,
             Some(match_) => {
                 match match_.as_text() {
@@ -96,7 +94,7 @@ impl Tangorin {
             let kana = try_option!(self.retrieve_from_selector(&doc, "rb"));
             let kanji = try_option!(self.retrieve_from_selector(&doc, "span[class=writing]"));
             let meaning = try_option!(self.retrieve_meaning(&doc));
-            let info : String = match self.retrieve_info(&doc) {
+            let info: String = match self.retrieve_info(&doc) {
                 Some(retrieved) => format!(" ({})", retrieved.replace("\u{2014}", "").replace(".", "").to_lowercase()),
                 None => String::new()
             };
