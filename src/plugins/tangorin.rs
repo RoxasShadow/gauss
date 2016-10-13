@@ -13,10 +13,10 @@ lazy_static! {
 }
 
 macro_rules! try_option {
-    ( $( $maybe_text: expr);* ) => {
+    ($($maybe_text: expr); *) => {
        match $($maybe_text)* {
          Some(text) => text,
-         None => { return Ok(()); }
+         None       => { return Ok(()); }
        };
     }
 }
@@ -25,13 +25,13 @@ impl Tangorin {
     fn grep_kanji(&self, msg: &str) -> Option<String> {
         match RE.captures(msg) {
             Some(captures) => captures.at(1).map(|e| e.to_owned()),
-            None => None
+            None           => None
         }
     }
 
     fn retrieve_from_selector(&self, doc: &kuchiki::NodeRef, selector: &str) -> Option<String> {
         doc.select(selector).unwrap().next().map(|match_| {
-            let node = match_.as_node().first_child().unwrap();
+            let node          = match_.as_node().first_child().unwrap();
             let borrowed_text = node.as_text().unwrap().borrow();
             borrowed_text.to_owned().trim().to_string()
         })
@@ -39,8 +39,8 @@ impl Tangorin {
 
     fn retrieve_meaning(&self, doc: &kuchiki::NodeRef) -> Option<String> {
         doc.select("span[class=eng]").unwrap().next().map(|match_| {
-            let node_children = match_.as_node().children();
             let mut meaning = String::new();
+            let     node_children = match_.as_node().children();
             for child in node_children {
                 if let Some(text) = child.as_text() {
                     meaning.push_str(text.borrow().as_str());
@@ -56,7 +56,6 @@ impl Tangorin {
 
     fn retrieve_info(&self, doc: &kuchiki::NodeRef) -> Option<String> {
         match doc.select("span[class=eng]").unwrap().next() {
-            None => None,
             Some(match_) => {
                 let node = match_.as_node();
                 let following_siblings = node.following_siblings();
@@ -67,39 +66,38 @@ impl Tangorin {
                         self.inner_text(first_sibling.as_node()).unwrap()
                     )
                 }
-            }
+            },
+            None => None,
         }
     }
 
     fn inner_text(&self, root: &kuchiki::NodeRef) -> Option<String> {
         match root.first_child() {
-            None => None,
-            Some(match_) => {
-                match match_.as_text() {
-                    Some(result_str) => Some(result_str.borrow().to_owned()),
-                    None => None
-                }
-            }
+            Some(match_) => match match_.as_text() {
+                Some(result_str) => Some(result_str.borrow().to_owned()),
+                None             => None
+            },
+            None => None
         }
     }
 
     fn tangorin(&self, server: &IrcServer, _: &Message, target: &str, msg: &str) -> io::Result<()> {
         let url = match self.grep_kanji(msg) {
             Some(kanji) => format!("http://tangorin.com/general/{}", kanji),
-            None      => { return Ok(()); }
+            None        => { return Ok(()); }
         };
 
         if let Ok(doc) = kuchiki::parse_html().from_http(&url) {
-            let romaji = try_option!(self.retrieve_from_selector(&doc, "rt"));
-            let kana = try_option!(self.retrieve_from_selector(&doc, "rb"));
-            let kanji = try_option!(self.retrieve_from_selector(&doc, "span[class=writing]"));
+            let romaji  = try_option!(self.retrieve_from_selector(&doc, "rt"));
+            let kana    = try_option!(self.retrieve_from_selector(&doc, "rb"));
+            let kanji   = try_option!(self.retrieve_from_selector(&doc, "span[class=writing]"));
             let meaning = try_option!(self.retrieve_meaning(&doc));
             let info: String = match self.retrieve_info(&doc) {
                 Some(retrieved) => format!(" ({})", retrieved.replace("\u{2014}", "").replace(".", "").to_lowercase()),
-                None => String::new()
+                None            => String::new()
             };
 
-            return server.send_privmsg(target, &format!("[Tangorin] {} ({} - {}): {}{}", &*kanji, &*kana, &*romaji, &*meaning, &*info))
+            return server.send_privmsg(target, &format!("[Tangorin] {} ({} - {}): {}{}", &*kanji, &*kana, &*romaji, &*meaning, &*info));
         }
 
         Ok(())
