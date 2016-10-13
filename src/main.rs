@@ -3,6 +3,7 @@ extern crate regex;
 extern crate kuchiki;
 extern crate time;
 extern crate rustfm;
+extern crate hyper;
 #[macro_use] extern crate lazy_static;
 
 #[macro_use] mod plugin;
