@@ -17,6 +17,5 @@ lazy_static = "0.2"
 time        = "0.1"
 kuchiki     = { version = "0.3", features = ["hyper"] }
 rustfm      = "0.1"
-hyper       = "0.9"
 
 serde_derive = { version = "0.8.0", optional = true }

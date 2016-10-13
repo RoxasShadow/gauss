@@ -2,7 +2,6 @@ use std::io;
 use irc::client::prelude::*;
 use regex::Regex;
 use plugin::Plugin;
-use hyper::client::{Client, RedirectPolicy};
 
 extern crate kuchiki;
 use kuchiki::traits::*;
@@ -29,16 +28,12 @@ impl Url {
     }
 
     fn url(&self, server: &IrcServer, _: &Message, target: &str, msg: &str) -> io::Result<()> {
-        let response = match self.grep_url(msg) {
-            Some(url) => {
-                let mut client = Client::new();
-                client.set_redirect_policy(RedirectPolicy::FollowAll);
-                client.get(&*url).send().ok()
-            },
-            None => { return Ok(()); }
+        let url = match self.grep_url(msg) {
+            Some(url) => url,
+            None      => { return Ok(()); }
         };
 
-        if let Ok(doc) = kuchiki::parse_html().from_http(response.unwrap()) {
+        if let Ok(doc) = kuchiki::parse_html().from_http(&url) {
             if let Some(match_) = doc.select("title").unwrap().last() {
                 let node    = match_.as_node().first_child().unwrap();
                 let title   = node.as_text().unwrap().borrow();
