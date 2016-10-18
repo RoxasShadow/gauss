@@ -1,8 +1,13 @@
+#![feature(proc_macro)]
 extern crate irc;
 extern crate regex;
 extern crate kuchiki;
 extern crate time;
 extern crate rustfm;
+extern crate serde;
+extern crate hyper;
+extern crate serde_json;
+#[macro_use] extern crate serde_derive;
 #[macro_use] extern crate lazy_static;
 
 #[macro_use] mod plugin;
@@ -40,6 +45,7 @@ fn main() {
         Arc::new(Mutex::new(plugins::seen::Seen::new())),
         Arc::new(Mutex::new(plugins::lastfm::LastFM::new())),
         Arc::new(Mutex::new(plugins::tangorin::Tangorin::new())),
+        Arc::new(Mutex::new(plugins::currency::Currency::new())),
     ];
 
     for message in server.iter() {
