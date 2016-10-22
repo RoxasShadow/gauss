@@ -5,9 +5,12 @@ use irc::client::prelude::*;
 use regex::Regex;
 use rustfm::*;
 use plugin::Plugin;
+use redis::Client as Redis;
+use redis::{Connection, Commands};
 
 lazy_static! {
-    static ref RE: Regex = Regex::new(r"!addlastfmuser (.+)").unwrap();
+    static ref RE:    Regex             = Regex::new(r"!addlastfmuser (.+)").unwrap();
+    static ref STORE: Mutex<Connection> = Mutex::new(Redis::open("redis://127.0.0.1/").unwrap().get_connection().unwrap());
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -16,7 +19,7 @@ struct LastFMUser {
     lastfm_username: String
 }
 
-register_plugin!(LastFM, users: Vec<LastFMUser>);
+register_plugin!(LastFM);
 
 impl LastFM {
     fn grep_username<'a>(&self, msg: &'a str) -> Option<&'a str> {
@@ -30,25 +33,10 @@ impl LastFM {
         match message.source_nickname() {
             Some(nickname) => match self.grep_username(msg) {
                 Some(lastfm_username) => {
-                    let user = LastFMUser {
-                        irc_username:    nickname.to_owned(),
-                        lastfm_username: lastfm_username.to_owned()
-                    };
-
-                    if let Some(index) = self.users.iter().position(|u| u.irc_username == nickname) {
-                        self.users.remove(index);
-                    }
-                    else {
-                        if let Some(index) = self.users.iter().position(|u| u.irc_username == nickname) {
-                            self.users.remove(index);
-                            self.users.push(user.clone());
-                        }
-                    }
-
-                    self.users.push(user.clone());
+                    let _: () = STORE.lock().unwrap().set(nickname, lastfm_username).unwrap();
 
                     server.send_privmsg(target,
-                                        &*format!("{} is now associated to the LastFM user {}", user.irc_username, user.lastfm_username))
+                                        &*format!("{} is now associated to the LastFM user {}", nickname, lastfm_username))
                 },
                 None => Ok(())
             },
@@ -67,12 +55,7 @@ impl LastFM {
 
         match message.source_nickname() {
             Some(nickname) => {
-                let username = if let Some(user) = self.users.iter().find(|u| u.irc_username == nickname) {
-                    user.lastfm_username.to_owned()
-                }
-                else {
-                    nickname.to_owned()
-                };
+                let username = STORE.lock().unwrap().get(nickname).unwrap_or(nickname.to_owned());
 
                 match CLIENT.lock().unwrap().recent_tracks(&*username).with_limit(1).send() {
                     Ok(recent_tracks) => match recent_tracks.tracks.first() {

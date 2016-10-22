@@ -18,6 +18,7 @@ time        = "0.1"
 kuchiki     = { version = "0.3", features = ["hyper"] }
 rustfm      = "0.1"
 hyper       = "0.9"
+redis       = "0.5"
 
 serde        = "0.8"
 serde_json   = "0.8"
