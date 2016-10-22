@@ -127,6 +127,15 @@ mod tests {
         let regex = Regex::new(r"=> ([0-9]{2})").unwrap();
         let msg = get_server_value(&server);
         let captures = regex.captures(&*msg).unwrap();
-        assert_eq!(captures.at(0), Some("=> 43"));
+        assert!(captures.at(0).is_some());
+
+        let result = captures.at(0).unwrap()
+            .split_whitespace()
+            .last().unwrap()
+            .parse::<i32>();
+        assert!(result.is_ok());
+
+        let value = result.unwrap();
+        assert!(value > 10 && value < 100);
     }
 }
